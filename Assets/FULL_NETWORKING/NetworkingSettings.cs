@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class NetworkingSettings: MonoBehaviour
+public static class NetworkingSettings
 {
-    public int MAX_MESSAGE_SIZE = 1024;
+    public static int MAX_MESSAGE_SIZE = 1024;
 }

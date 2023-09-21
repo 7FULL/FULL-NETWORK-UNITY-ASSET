@@ -63,7 +63,7 @@ public class Packague
         
         string options = json.Substring(json.IndexOf("\"options\":[") + 11);
 
-        if (options.Length > 0)
+        if (options.IndexOf("]") > 1)
         {
             options = options.Substring(0, options.IndexOf("]"));
         }

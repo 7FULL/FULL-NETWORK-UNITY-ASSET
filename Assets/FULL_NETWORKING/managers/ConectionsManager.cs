@@ -5,7 +5,7 @@
     using System.Text;
     using System.Threading;
     using UnityEngine;
-    public class TCPConnection: MonoBehaviour
+    public class ConectionsManager: MonoBehaviour
     { 
         private TcpClient client;
         private NetworkStream stream;
@@ -43,8 +43,14 @@
                 isConnected = false;
                 StartServer();
             }
+            
             try
             {
+                if (options == null)
+                {
+                    options = new PackagueOptions[]{};
+                }
+                
                 Packague packague = new Packague(type,0,options , message);
                 byte[] data = Encoding.UTF8.GetBytes(packague.ToJson());
                 stream.Write(data, 0, data.Length);
@@ -92,11 +98,14 @@
                     switch (packagueReceived.PackagueType)
                     {
                         case PackagueType.HANDSHAKE:
-                            Debug.Log(packagueReceived.Data);
+                            
                             break;
 
                         case PackagueType.RPC:
-
+                            // We execute the RPC
+                            RPCManager rpcManager = new RPCManager();
+                            
+                            rpcManager.CallRPC(packagueReceived.Data, null);
                             break;
 
                         case PackagueType.TARGETRPC:
