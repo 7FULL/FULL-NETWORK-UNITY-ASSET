@@ -5,7 +5,7 @@
     using System.Text;
     using System.Threading;
     using UnityEngine;
-    public class ConectionsManager: MonoBehaviour
+    public class Transport: MonoBehaviour
     { 
         private TcpClient client;
         private NetworkStream stream;
@@ -15,6 +15,13 @@
         private Thread receiveThread;
      
         private bool isConnected = false;
+        
+        private RPCManager rpcManager = new RPCManager();
+
+        private void Awake()
+        {
+            StartServer();
+        }
 
         private void StartServer()
         {
@@ -94,6 +101,14 @@
                     string receivedMessage = Encoding.UTF8.GetString(responseBuffer.ToArray());
 
                     Packague packagueReceived = Packague.FromJson(receivedMessage);
+                    
+                    Debug.Log(packagueReceived);
+
+                    // If the message is not from the server, we ignore it because it is another client's message
+                    if (packagueReceived.ClientID != 0)
+                    {
+                        return;
+                    }
 
                     switch (packagueReceived.PackagueType)
                     {
@@ -103,7 +118,6 @@
 
                         case PackagueType.RPC:
                             // We execute the RPC
-                            RPCManager rpcManager = new RPCManager();
                             
                             rpcManager.CallRPC(packagueReceived.Data, null);
                             break;
@@ -123,5 +137,14 @@
                     }
                 }
             }
-        } 
+        }
+        
+        // This method is called when the client disconnects from the server
+        private void OnApplicationQuit()
+        {
+            if (client != null)
+            {
+                client.Close();
+            }
+        }
     }

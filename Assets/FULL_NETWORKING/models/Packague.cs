@@ -83,7 +83,24 @@ public class Packague
 
     public override string ToString()
     {
-        return ToJson();
+        // We make a better string representation of the packague
+        string optionsString = "";
+        for (int i = 0; i < options.Length; i++)
+        {
+            optionsString += options[i];
+            if (i < options.Length - 1)
+            {
+                optionsString += ",";
+            }
+        }
+        
+        return "Packague:\n" +
+               "{\n" +
+               "\t packagueType: " + packagueType + ",\n" +
+               "\t clientID: " + clientID + ",\n" +
+               "\t options: [" + optionsString + "],\n" +
+               "\t data: " + data + "\n" +
+               "}";
     }
 }
 
