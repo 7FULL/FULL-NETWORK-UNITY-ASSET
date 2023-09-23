@@ -3,6 +3,7 @@
     using System.Linq;
     using System.Net.Sockets;
     using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using UnityEngine;
     public class Transport: MonoBehaviour
@@ -131,40 +132,152 @@
 
                     Packague packagueReceived = Packague.FromJson(receivedMessage);
                     
-                    Debug.Log(packagueReceived);
-
-                    // If the message is not from the server, we ignore it because it is another client's message
-                    if (packagueReceived.ClientID != 0)
+                    /*
+                    Packague:
                     {
-                        return;
+                        packagueType: TARGETRPC,
+                        clientID: 3,
+                        options: [0,0,0,0,0,0],
+                        data: 
+                            {
+                                method:RPC_MetodoEjemploConParametros,
+                                parameters:
+                                        [
+                                            {
+                                                type:System.Int32,
+                                                value:1
+                                            },
+                                            {
+                                                type:System.String,
+                                                value:hola
+                                            }
+                                        ],
+                                // In case of TARGETRPC is different from -1
+                                targetID: 390221777
+                            }
                     }
+                    */
 
                     switch (packagueReceived.PackagueType)
                     {
                         case PackagueType.HANDSHAKE:
                             
                             break;
-
-                        case PackagueType.RPC:
-                            // We execute the RPC
-                            
-                            rpcManager.CallRPC(packagueReceived.Data, null);
-                            break;
-
-                        case PackagueType.TARGETRPC:
-
-                            break;
-
+                        
                         case PackagueType.PLAIN:
 
                             break;
 
+                        // If the message is a RPC or a TARGETRPC, we call the method
                         default:
+                            Data data = Data.FromJson(packagueReceived.Data);
+
+                            rpcManager.CallRPC(data.method , data.parameters);
 
                             break;
-
                     }
                 }
+            }
+        }
+        
+        private class Data
+        {
+            public string method;
+            public object[] parameters;
+            public int targetID;
+
+            public Data(string method, object[] parameters, int targetID)
+            {
+                this.method = method;
+                this.parameters = parameters;
+                this.targetID = targetID;
+            }
+            
+            public static Data FromJson(string json)
+            {
+                string[] jsonSplitted = json.Split(",parameters:");
+
+                string method = jsonSplitted[0].Split(':')[1];
+                
+                List<object> parameters = new List<object>();
+                
+                string parametersString = jsonSplitted[1].Split(",targetID:")[0];
+
+                if (parametersString != "[]")
+                {
+                    string[] parametersSplitted = parametersString.Split('{');
+                    
+                    for (int i = 1; i < parametersSplitted.Length; i++)
+                    {
+                        string parameterType = parametersSplitted[i].Split(',')[0].Split(':')[1];
+                        string parameterValue = parametersSplitted[i].Split(',')[1].Split(':')[1];
+                        
+                        parameterValue = parameterValue.Substring(0, parameterValue.Length - 1);
+                        
+                        switch (parameterType)
+                        {
+                            case "System.Int32":
+                                parameters.Add(int.Parse(parameterValue));
+                                break;
+                            case "System.String":
+                                parameters.Add(parameterValue);
+                                break;
+                            case "System.Single":
+                                parameters.Add(float.Parse(parameterValue));
+                                break;
+                            case "System.Boolean":
+                                parameters.Add(bool.Parse(parameterValue));
+                                break;
+                            case "System.Double":
+                                parameters.Add(double.Parse(parameterValue));
+                                break;
+                            case "System.Char":
+                                parameters.Add(char.Parse(parameterValue));
+                                break;
+                            case "System.Byte":
+                                parameters.Add(byte.Parse(parameterValue));
+                                break;
+                            case "System.SByte":
+                                parameters.Add(sbyte.Parse(parameterValue));
+                                break;
+                            case "System.UInt16":
+                                parameters.Add(ushort.Parse(parameterValue));
+                                break;
+                            case "System.UInt32":
+                                parameters.Add(uint.Parse(parameterValue));
+                                break;
+                            case "System.UInt64":
+                                parameters.Add(ulong.Parse(parameterValue));
+                                break;
+                            case "System.Int16":
+                                parameters.Add(short.Parse(parameterValue));
+                                break;
+                            case "System.Decimal":
+                                parameters.Add(decimal.Parse(parameterValue));
+                                break;
+                            case "System.DateTime":
+                                parameters.Add(DateTime.Parse(parameterValue));
+                                break;
+                            case "System.Guid":
+                                parameters.Add(Guid.Parse(parameterValue));
+                                break;
+                            case "System.Object":
+                                parameters.Add(parameterValue);
+                                break;
+                            default:
+                                Debug.LogError("Type not found: " + parameterType);
+                                break;
+                        }
+                    }
+                }
+                
+                string targetIDString = jsonSplitted[1].Split(",targetID:")[1];
+                
+                targetIDString = targetIDString.Substring(0, targetIDString.Length - 1);
+                
+                int targetID = int.Parse(targetIDString);
+                
+                return new Data(method, parameters.ToArray(), targetID);
             }
         }
         

@@ -35,8 +35,6 @@ public class FULL: MonoBehaviour
         transport.StartClient();
         
         connectionID = transport.GetConnectionID();
-        
-        Debug.Log("Connection ID: " + connectionID);
     }
     
     // We suscribe to the OnConnected event from the transport
@@ -102,7 +100,7 @@ public class FULL: MonoBehaviour
         
         PackagueType type = PackagueType.RPC;
         
-        string message = "{" +
+        string message = '{' +
                          "method:" + method + ",";
 
         message += "parameters:[";
@@ -113,7 +111,7 @@ public class FULL: MonoBehaviour
                 message += "{";
                 message += "type:" + parameters[i].GetType() + ",";
                 message += "value:" + parameters[i];
-                message += "}";
+                message += "},";
             }
             
         }
@@ -123,6 +121,10 @@ public class FULL: MonoBehaviour
         {
             message += "targetID:" + clientID;
             type = PackagueType.TARGETRPC;
+        }
+        else
+        {
+            message += "targetID: -1";
         }
         
         message += "}";
