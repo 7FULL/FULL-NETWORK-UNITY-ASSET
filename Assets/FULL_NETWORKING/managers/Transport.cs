@@ -14,16 +14,27 @@
      
         private Thread receiveThread;
      
-        private bool isConnected = false;
+        private bool _isConnected = false;
         
-        private RPCManager rpcManager = new RPCManager();
+        public event Action<bool> ConnectionChange;
 
-        private void Awake()
+        public bool isConnected
         {
-            StartServer();
+            get { return _isConnected; }
+            set
+            {
+                if (_isConnected != value)
+                {
+                    _isConnected = value;
+                    ConnectionChange?.Invoke(_isConnected); // Invoca el evento cuando el valor cambia
+                }
+            }
         }
 
-        private void StartServer()
+        private RPCManager rpcManager = new RPCManager();
+
+        // This method is called from the client to connect to the server
+        public void StartClient()
         {
             try
             {
@@ -43,12 +54,30 @@
             }
         }
 
+        // This method is called from the client to disconnect from the server
+        public void Disconnect()
+        {
+            if (client != null)
+            {
+                client.Close();
+            }
+        }
+        
+        // This method returns the client ID
+        public int GetConnectionID()
+        {
+            if (!client.Connected)
+            {
+                return -1;
+            }
+            return client.Client.LocalEndPoint.GetHashCode();
+        }
+        
         public void SendTCPMessague(PackagueType type, string message, PackagueOptions[] options = null)
         {
             if (client == null || !client.Connected)
             {
                 isConnected = false;
-                StartServer();
             }
             
             try
@@ -58,7 +87,7 @@
                     options = new PackagueOptions[]{};
                 }
                 
-                Packague packague = new Packague(type,0,options , message);
+                Packague packague = new Packague(type,GetConnectionID(),options , message);
                 byte[] data = Encoding.UTF8.GetBytes(packague.ToJson());
                 stream.Write(data, 0, data.Length);
             }
@@ -142,9 +171,6 @@
         // This method is called when the client disconnects from the server
         private void OnApplicationQuit()
         {
-            if (client != null)
-            {
-                client.Close();
-            }
+            Disconnect();
         }
     }

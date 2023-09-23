@@ -119,5 +119,5 @@ public enum PackagueOptions
     // Option if you want to send back the packague to the sender in case of a target rpc
     TARGET_SEND_BACK = 1,
     // Option if you want to send back the packague to the sender in case of a rpc
-    RPC_SEND_BACK = 2,
+    RPC_DONT_SEND_BACK = 2,
 }
