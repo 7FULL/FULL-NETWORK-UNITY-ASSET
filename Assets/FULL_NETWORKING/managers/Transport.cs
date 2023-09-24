@@ -6,20 +6,22 @@
     using System.Text.RegularExpressions;
     using System.Threading;
     using UnityEngine;
-    public class Transport: MonoBehaviour
+    public static class Transport
     { 
-        private TcpClient client;
-        private NetworkStream stream;
-        private string serverIP = "localhost"; // Reemplaza con la dirección IP de tu servidor
-        private int serverPort = 3000;  //Reemplaza con el puerto de tu servidor
+        private static TcpClient client;
+        private static NetworkStream stream;
+        private static string serverIP = "localhost"; // Reemplaza con la dirección IP de tu servidor
+        private static int serverPort = 3000;  //Reemplaza con el puerto de tu servidor
      
-        private Thread receiveThread;
+        private static Thread receiveThread;
      
-        private bool _isConnected = false;
-        
-        public event Action<bool> ConnectionChange;
+        private static bool _isConnected = false;
 
-        public bool isConnected
+        public static event Action<bool> ConnectionChange;
+        
+        public static CallbacksContainer callbacksContainer;
+
+        public static bool isConnected
         {
             get { return _isConnected; }
             set
@@ -32,10 +34,16 @@
             }
         }
 
-        private RPCManager rpcManager = new RPCManager();
+        private static RPCManager rpcManager = new RPCManager();
+        
+        // This methos initializes the ConnectionCallbacks container
+        public static void InitializeConnectionCallbacksContainer(ICallbacks[] callbacks)
+        {
+            callbacksContainer = new CallbacksContainer(callbacks);
+        }
 
         // This method is called from the client to connect to the server
-        public void StartClient()
+        public static int StartClient()
         {
             try
             {
@@ -47,16 +55,21 @@
                 receiveThread.Start();
                 
                 isConnected = true;
+                
+                // We trigger the OnConnected event of the IConectionCallbacks interface
+                callbacksContainer.OnConnected();
             }
             catch (Exception e)
             {
                 Debug.LogError("Error: "+e);
                 throw;
             }
+            
+            return GetConnectionID();
         }
 
         // This method is called from the client to disconnect from the server
-        public void Disconnect()
+        public static void Disconnect()
         {
             if (client != null)
             {
@@ -65,7 +78,7 @@
         }
         
         // This method returns the client ID
-        public int GetConnectionID()
+        public static int GetConnectionID()
         {
             if (!client.Connected)
             {
@@ -74,11 +87,13 @@
             return client.Client.LocalEndPoint.GetHashCode();
         }
         
-        public void SendTCPMessague(PackagueType type, string message, PackagueOptions[] options = null)
+        public static void SendTCPMessague(PackagueType type, string message, PackagueOptions[] options = null)
         {
-            if (client == null || !client.Connected)
+            if ((client == null || !client.Connected) && isConnected)
             {
                 isConnected = false;
+                callbacksContainer.OnDisconnected();
+                StartClient();
             }
             
             try
@@ -103,13 +118,14 @@
         }
         
         // This method is called when the client receives a message from the server
-        private void ReceiveTCPMessage()
+        private static void ReceiveTCPMessage()
         {
             while (isConnected) 
             {
                 if (!client.Connected)
                 {
                     isConnected = false;
+                    callbacksContainer.OnDisconnected();
                 }
                 else
                 {
@@ -161,11 +177,22 @@
                     switch (packagueReceived.PackagueType)
                     {
                         case PackagueType.HANDSHAKE:
+                            Debug.Log(packagueReceived.Data);
                             
                             break;
                         
                         case PackagueType.PLAIN:
+                            // We trigger the OnMessageReceived event
 
+                            break;
+                        
+                        case PackagueType.CONNECTION:
+                            // If a clients connects 
+                            
+                            break;
+                        
+                        case PackagueType.DISCONNECTION:
+                            
                             break;
 
                         // If the message is a RPC or a TARGETRPC, we call the method
@@ -279,11 +306,5 @@
                 
                 return new Data(method, parameters.ToArray(), targetID);
             }
-        }
-        
-        // This method is called when the client disconnects from the server
-        private void OnApplicationQuit()
-        {
-            Disconnect();
         }
     }

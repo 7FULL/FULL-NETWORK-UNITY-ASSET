@@ -111,7 +111,9 @@ public enum PackagueType
     TARGETRPC = 3,
     POSITION = 4,
     ROTATION = 5,
-    PLAIN = 6
+    PLAIN = 6,
+    DISCONNECTION = 7,
+    CONNECTION = 8,
 }
 
 public enum PackagueOptions
