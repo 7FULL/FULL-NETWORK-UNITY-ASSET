@@ -5,18 +5,23 @@ public class FULL: MonoBehaviour
 {
     // This variable is used to know is own by the client or is a remote client
     private bool _isMine;
-    
-    private bool IsMine
+
+    private void Awake()
+    {
+        Transport.StartClient(this);
+    }
+
+    public bool IsMine
     {
         get
         {
-            if (Transport.GetConnectionID() == connectionID)
+            if (Transport.ConnectionID == connectionID)
             {
                 return true;
             }
             else
             {
-                Debug.Log("IsMine: " + Transport.GetConnectionID() + " " + connectionID);
+                Debug.Log("IsMine: " + Transport.ConnectionID + " " + connectionID);
                 return false;
             }
         }
@@ -28,11 +33,7 @@ public class FULL: MonoBehaviour
     public int ConnectionID
     {
         get => connectionID;
-    }
-
-    private void Start()
-    {
-        connectionID = Transport.GetConnectionID();
+        set => connectionID = value;
     }
 
     public delegate void RPCMethodDelegate();
@@ -102,6 +103,24 @@ public class FULL: MonoBehaviour
         message += "],";
 
         message += "targetID: -1";
+        
+        message += "}";
+
+        Transport.SendTCPMessague(type , message, null);
+    }
+    
+    public void SendRPC(string method, int clientID)
+    {
+        // If the client specify an ID, then it is a target RPC
+        PackagueType type = PackagueType.TARGETRPC;
+        
+        string message = '{' +
+                         "method:" + method + ",";
+
+        message += "parameters:[";
+        message += "],";
+
+        message += "targetID:"+clientID;
         
         message += "}";
 

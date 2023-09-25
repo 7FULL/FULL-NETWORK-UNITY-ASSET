@@ -15,8 +15,6 @@ public class NetworkBehaviour: MonoBehaviour, IConnectionCallbacks
         ICallbacks[] callbacks = FindObjectsOfType<MonoBehaviour>().OfType<ICallbacks>().ToArray();
         
         Transport.InitializeConnectionCallbacksContainer(callbacks);
-
-        Transport.StartClient();
     }
 
     // This method is called when the client disconnects from the server

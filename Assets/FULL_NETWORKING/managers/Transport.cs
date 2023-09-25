@@ -16,6 +16,13 @@
         private static Thread receiveThread;
      
         private static bool _isConnected = false;
+        
+        private static int connectionID = -1;
+        
+        public static int ConnectionID
+        {
+            get => connectionID;
+        }
 
         public static event Action<bool> ConnectionChange;
         
@@ -43,8 +50,12 @@
         }
 
         // This method is called from the client to connect to the server
-        public static int StartClient()
+        public static int StartClient(FULL f = null)
         {
+            if (client != null)
+            {
+                return -1;
+            }
             try
             {
                 client = new TcpClient(serverIP, serverPort);
@@ -56,8 +67,41 @@
                 
                 isConnected = true;
                 
+                int token = -1;
+                //We read the token from the server response
+                while (token == -1)
+                {
+                    List<byte> responseBuffer = new List<byte>();
+                
+                    // Max message size is 1024 bytes (1 KB) 
+                    byte[] buffer = new byte[NetworkManager.Instance.settings.MAX_MESSAGE_SIZE];
+                    int bytesRead;
+
+                    do 
+                    {
+                        bytesRead = stream.Read(buffer, 0, buffer.Length);
+                        if (bytesRead > 0)
+                        {
+                            responseBuffer.AddRange(buffer.Take(bytesRead));
+                        }
+                    } while (bytesRead == buffer.Length);
+
+                    string receivedMessage = Encoding.UTF8.GetString(responseBuffer.ToArray());
+
+                    token = int.Parse(receivedMessage);
+                    
+                    connectionID = token;
+
+                    if (f != null)
+                    {
+                        f.ConnectionID = token;
+                    }
+                }
+
                 // We trigger the OnConnected event of the IConectionCallbacks interface
                 callbacksContainer.OnConnected();
+                
+                Debug.Log("Connected to server");
             }
             catch (Exception e)
             {
@@ -65,7 +109,7 @@
                 throw;
             }
             
-            return GetConnectionID();
+            return connectionID;
         }
 
         // This method is called from the client to disconnect from the server
@@ -76,23 +120,21 @@
                 client.Close();
             }
         }
-        
-        // This method returns the client ID
-        public static int GetConnectionID()
-        {
-            if (!client.Connected)
-            {
-                return -1;
-            }
-            return client.Client.LocalEndPoint.GetHashCode();
-        }
-        
+
         public static void SendTCPMessague(PackagueType type, string message, PackagueOptions[] options = null)
         {
             if ((client == null || !client.Connected) && isConnected)
             {
+                // Restore variables
+                client = null;
+                stream = null;
+                // We abort the thread before losing the reference
+                receiveThread.Abort();
+                receiveThread = null;
+
                 isConnected = false;
                 callbacksContainer.OnDisconnected();
+                Debug.LogWarning("Client disconnected, trying to reconnect...");
                 StartClient();
             }
             
@@ -103,7 +145,8 @@
                     options = new PackagueOptions[]{};
                 }
                 
-                Packague packague = new Packague(type,GetConnectionID(),options , message);
+                Data dataParsed = Data.FromJson(message);
+                Packague packague = new Packague(type,connectionID,options , dataParsed);
                 byte[] data = Encoding.UTF8.GetBytes(packague.ToJson());
                 stream.Write(data, 0, data.Length);
             }
@@ -132,7 +175,7 @@
                     List<byte> responseBuffer = new List<byte>();
                 
                     // Max message size is 1024 bytes (1 KB) 
-                    byte[] buffer = new byte[NetworkingSettings.MAX_MESSAGE_SIZE];
+                    byte[] buffer = new byte[NetworkManager.Instance.settings.MAX_MESSAGE_SIZE];
                     int bytesRead;
 
                     do 
@@ -147,7 +190,7 @@
                     string receivedMessage = Encoding.UTF8.GetString(responseBuffer.ToArray());
 
                     Packague packagueReceived = Packague.FromJson(receivedMessage);
-                    
+
                     /*
                     Packague:
                     {
@@ -197,114 +240,13 @@
 
                         // If the message is a RPC or a TARGETRPC, we call the method
                         default:
-                            Data data = Data.FromJson(packagueReceived.Data);
+                            Data data = packagueReceived.Data;
 
                             rpcManager.CallRPC(data.method, data.parameters);
 
                             break;
                     }
                 }
-            }
-        }
-        
-        private class Data
-        {
-            public string method;
-            public object[] parameters;
-            public int targetID;
-
-            public Data(string method, object[] parameters, int targetID)
-            {
-                this.method = method;
-                this.parameters = parameters;
-                this.targetID = targetID;
-            }
-            
-            public static Data FromJson(string json)
-            {
-                string[] jsonSplitted = json.Split(",parameters:");
-
-                string method = jsonSplitted[0].Split(':')[1];
-                
-                List<object> parameters = new List<object>();
-                
-                string parametersString = jsonSplitted[1].Split(",targetID:")[0];
-
-                if (parametersString != "[]")
-                {
-                    string[] parametersSplitted = parametersString.Split('{');
-                    
-                    for (int i = 1; i < parametersSplitted.Length; i++)
-                    {
-                        string parameterType = parametersSplitted[i].Split(',')[0].Split(':')[1];
-                        string parameterValue = parametersSplitted[i].Split(',')[1].Split(':')[1];
-                        
-                        parameterValue = parameterValue.Substring(0, parameterValue.Length - 1);
-                        
-                        switch (parameterType)
-                        {
-                            case "System.Int32":
-                                parameters.Add(int.Parse(parameterValue));
-                                break;
-                            case "System.String":
-                                parameters.Add(parameterValue);
-                                break;
-                            case "System.Single":
-                                parameters.Add(float.Parse(parameterValue));
-                                break;
-                            case "System.Boolean":
-                                parameters.Add(bool.Parse(parameterValue));
-                                break;
-                            case "System.Double":
-                                parameters.Add(double.Parse(parameterValue));
-                                break;
-                            case "System.Char":
-                                parameters.Add(char.Parse(parameterValue));
-                                break;
-                            case "System.Byte":
-                                parameters.Add(byte.Parse(parameterValue));
-                                break;
-                            case "System.SByte":
-                                parameters.Add(sbyte.Parse(parameterValue));
-                                break;
-                            case "System.UInt16":
-                                parameters.Add(ushort.Parse(parameterValue));
-                                break;
-                            case "System.UInt32":
-                                parameters.Add(uint.Parse(parameterValue));
-                                break;
-                            case "System.UInt64":
-                                parameters.Add(ulong.Parse(parameterValue));
-                                break;
-                            case "System.Int16":
-                                parameters.Add(short.Parse(parameterValue));
-                                break;
-                            case "System.Decimal":
-                                parameters.Add(decimal.Parse(parameterValue));
-                                break;
-                            case "System.DateTime":
-                                parameters.Add(DateTime.Parse(parameterValue));
-                                break;
-                            case "System.Guid":
-                                parameters.Add(Guid.Parse(parameterValue));
-                                break;
-                            case "System.Object":
-                                parameters.Add(parameterValue);
-                                break;
-                            default:
-                                Debug.LogError("Type not found: " + parameterType);
-                                break;
-                        }
-                    }
-                }
-                
-                string targetIDString = jsonSplitted[1].Split(",targetID:")[1];
-                
-                targetIDString = targetIDString.Substring(0, targetIDString.Length - 1);
-                
-                int targetID = int.Parse(targetIDString);
-                
-                return new Data(method, parameters.ToArray(), targetID);
             }
         }
     }
