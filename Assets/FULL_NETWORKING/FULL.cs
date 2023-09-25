@@ -16,6 +16,7 @@ public class FULL: MonoBehaviour
             }
             else
             {
+                Debug.Log("IsMine: " + Transport.GetConnectionID() + " " + connectionID);
                 return false;
             }
         }
@@ -27,15 +28,11 @@ public class FULL: MonoBehaviour
     public int ConnectionID
     {
         get => connectionID;
-        set => connectionID = value;
     }
 
     private void Start()
     {
-        if (IsMine)
-        {
-            ConnectionID = Transport.GetConnectionID();
-        }
+        connectionID = Transport.GetConnectionID();
     }
 
     public delegate void RPCMethodDelegate();
@@ -46,21 +43,69 @@ public class FULL: MonoBehaviour
         
         PackagueType type = PackagueType.RPC;
         
-        string message = "{" +
+        string message = '{' +
                          "method:" + method.Method.Name + ",";
-        
-        message += "parameters:[],";
-        
-        
+
+        message += "parameters:[";
+        message += "],";
+
         if (clientID != -1)
         {
             message += "targetID:" + clientID;
             type = PackagueType.TARGETRPC;
         }
+        else
+        {
+            message += "targetID: -1";
+        }
         
         message += "}";
 
         Transport.SendTCPMessague(type , message, options);
+    }
+
+    public void SendRPC(string method, int clientID = -1, PackagueOptions[] options = null)
+    {
+        // If the client specify an ID, then it is a target RPC
+        PackagueType type = PackagueType.RPC;
+        
+        string message = '{' +
+                         "method:" + method + ",";
+
+        message += "parameters:[";
+        message += "],";
+
+        if (clientID != -1)
+        {
+            message += "targetID:" + clientID;
+            type = PackagueType.TARGETRPC;
+        }
+        else
+        {
+            message += "targetID: -1";
+        }
+        
+        message += "}";
+
+        Transport.SendTCPMessague(type , message, options);
+    }
+
+    public void SendRPC(string method)
+    {
+        // If the client specify an ID, then it is a target RPC
+        PackagueType type = PackagueType.RPC;
+        
+        string message = '{' +
+                         "method:" + method + ",";
+
+        message += "parameters:[";
+        message += "],";
+
+        message += "targetID: -1";
+        
+        message += "}";
+
+        Transport.SendTCPMessague(type , message, null);
     }
     
     public void SendRPC(string method, object[] parameters = null, int clientID = -1, PackagueOptions[] options = null)

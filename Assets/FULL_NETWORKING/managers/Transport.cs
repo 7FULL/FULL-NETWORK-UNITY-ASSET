@@ -199,7 +199,7 @@
                         default:
                             Data data = Data.FromJson(packagueReceived.Data);
 
-                            rpcManager.CallRPC(data.method , data.parameters);
+                            rpcManager.CallRPC(data.method, data.parameters);
 
                             break;
                     }
