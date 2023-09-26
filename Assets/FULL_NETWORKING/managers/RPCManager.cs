@@ -10,9 +10,11 @@ public class RPCManager
     public RPCManager()
     {
         GameObject[] objetosEnEscena = GameObject.FindObjectsOfType<GameObject>();
-        
+
         foreach (GameObject objeto in objetosEnEscena)
         {
+            FULL[] fulls = objeto.GetComponents<FULL>();
+            
             NetworkBehaviour[] scripts = objeto.GetComponents<NetworkBehaviour>();
             
             foreach (NetworkBehaviour script in scripts)
@@ -31,15 +33,37 @@ public class RPCManager
 
                 methods.Add(objeto, metodosConRPC.ToList());
             }
+
+            foreach (FULL f in fulls)
+            {
+                MethodInfo[] metodos = f.GetType().GetMethods();
+                
+                List<RPCInfo> metodosConRPC = new List<RPCInfo>();
+                
+                foreach (MethodInfo metodo in metodos)
+                {
+                    if (metodo.GetCustomAttributes(typeof(ClientRPCAttribute), true).Length > 0)
+                    {
+                        AddRPC(objeto, metodo, true);
+                    }
+                }
+            }
         }
     }
     
     // This is to add a new RPC method to the list
-    public void AddRPC(GameObject gameObject, MethodInfo methodInfo)
+    public void AddRPC(GameObject gameObject, MethodInfo methodInfo, bool isFULL)
     {
         if (methods.ContainsKey(gameObject))
         {
-            methods[gameObject].Add(new RPCInfo(methodInfo, gameObject.GetComponent<NetworkBehaviour>()));
+            if (isFULL)
+            {
+                methods[gameObject].Add(new RPCInfo(methodInfo, gameObject.GetComponent<FULL>()));
+            }
+            else
+            {
+                methods[gameObject].Add(new RPCInfo(methodInfo, gameObject.GetComponent<NetworkBehaviour>()));
+            }
         }
         else
         {
@@ -48,56 +72,40 @@ public class RPCManager
     }
     
     // Call RPC
-    public void CallRPC(string methodName, object[] parameters)
+    public void CallRPC(string methodName, DataParameterInfo[] parameters)
     {
+        bool aux = false;
         foreach (KeyValuePair<GameObject, List<RPCInfo>> pair in methods)
         {
             foreach (RPCInfo rpcInfo in pair.Value)
             {
-                //Debug.Log(rpcInfo.toTExt());
                 if (rpcInfo.methodInfo.Name == methodName)
                 {
-                    rpcInfo.methodInfo.Invoke(rpcInfo.target, parameters);
-                }
-            }
-        }
-    }
-    
-    public List<Type> FindNetworkBehaviourTypes()
-    {
-        Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-        List<Type> networkBehaviourTypes = new List<Type>();
-
-        foreach (Assembly assembly in assemblies)
-        {
-            Type[] types = assembly.GetTypes();
-            networkBehaviourTypes.AddRange(types.Where(t => t.IsSubclassOf(typeof(NetworkBehaviour))));
-        }
-
-        return networkBehaviourTypes;
-    }
-    
-    public List<GameObject> FindGameObjectsWithNetworkBehaviour()
-    {
-        List<Type> networkBehaviourTypes = FindNetworkBehaviourTypes();
-        List<GameObject> gameObjectsWithNetworkBehaviour = new List<GameObject>();
-
-        foreach (GameObject go in GameObject.FindObjectsOfType<GameObject>())
-        {
-            NetworkBehaviour[] networkBehaviours = go.GetComponents<NetworkBehaviour>();
-
-            foreach (NetworkBehaviour nb in networkBehaviours)
-            {
-                if (networkBehaviourTypes.Contains(nb.GetType()))
-                {
-                    gameObjectsWithNetworkBehaviour.Add(go);
-                    break; // No need to check this GameObject further
+                    aux = true;
+                    
+                    
+                    rpcInfo.methodInfo.Invoke(rpcInfo.target, parseParameters(parameters));
                 }
             }
         }
 
-        return gameObjectsWithNetworkBehaviour;
+        if (!aux)
+        {
+            Debug.LogWarning("The rpc " + methodName + " doesn't exist");
+        }
+    }
+
+    private object[] parseParameters(DataParameterInfo[] parameters)
+    {
+        List<object> parametersList = new List<object>();
+        
+        foreach (DataParameterInfo parameter in parameters)
+        {
+            Type type = Type.GetType(parameter.type);
+            parametersList.Add(Convert.ChangeType(parameter.value, type));
+        }
+        
+        return parametersList.ToArray();
     }
 
     public class RPCInfo
@@ -113,9 +121,9 @@ public class RPCManager
         
         // We use this method instead of ToString() because ToString() can only be called from the main thread
         // and this is executing in a background thread
-        public string toTExt()
+        public string toText()
         {
-            return "RPCInfo: " + methodInfo.Name + " " + target;
+            return methodInfo.Name;
         }
     }
 }

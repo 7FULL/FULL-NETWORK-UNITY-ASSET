@@ -8,6 +8,6 @@ public class TCPPruebas : MonoBehaviour
 
     public void SendTCPMessague(string message)
     {
-        Transport.SendTCPMessague(type, message, options);
+        //Transport.SendTCPMessague(type, message, options);
     } 
 }

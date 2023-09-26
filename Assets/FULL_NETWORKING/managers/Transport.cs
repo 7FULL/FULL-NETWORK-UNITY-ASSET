@@ -72,8 +72,7 @@
                 while (token == -1)
                 {
                     List<byte> responseBuffer = new List<byte>();
-                
-                    // Max message size is 1024 bytes (1 KB) 
+                    
                     byte[] buffer = new byte[NetworkManager.Instance.settings.MAX_MESSAGE_SIZE];
                     int bytesRead;
 
@@ -121,7 +120,7 @@
             }
         }
 
-        public static void SendTCPMessague(PackagueType type, string message, PackagueOptions[] options = null)
+        public static void SendTCPMessague(Packague packague)
         {
             if ((client == null || !client.Connected) && isConnected)
             {
@@ -137,17 +136,10 @@
                 Debug.LogWarning("Client disconnected, trying to reconnect...");
                 StartClient();
             }
-            
+
             try
             {
-                if (options == null)
-                {
-                    options = new PackagueOptions[]{};
-                }
-                
-                Data dataParsed = Data.FromJson(message);
-                Packague packague = new Packague(type,connectionID,options , dataParsed);
-                byte[] data = Encoding.UTF8.GetBytes(packague.ToJson());
+                byte[] data = Encoding.UTF8.GetBytes(JsonUtility.ToJson(packague));
                 stream.Write(data, 0, data.Length);
             }
             catch (Exception e)
@@ -189,7 +181,7 @@
 
                     string receivedMessage = Encoding.UTF8.GetString(responseBuffer.ToArray());
 
-                    Packague packagueReceived = Packague.FromJson(receivedMessage);
+                    Packague packagueReceived = JsonUtility.FromJson<Packague>(receivedMessage);
 
                     /*
                     Packague:
@@ -216,22 +208,22 @@
                             }
                     }
                     */
-
-                    switch (packagueReceived.PackagueType)
+                    
+                    switch (packagueReceived.packagueType)
                     {
                         case PackagueType.HANDSHAKE:
-                            Debug.Log(packagueReceived.Data);
+                            Debug.Log(packagueReceived);
                             
                             break;
                         
                         case PackagueType.PLAIN:
                             // We trigger the OnMessageReceived event
-
+                            Debug.Log(packagueReceived);
                             break;
                         
                         case PackagueType.CONNECTION:
-                            // If a clients connects 
-                            
+                            // If a clients connects the targetID is his ID
+                            callbacksContainer.OnClientConnected(packagueReceived.data.targetID);
                             break;
                         
                         case PackagueType.DISCONNECTION:
@@ -240,7 +232,7 @@
 
                         // If the message is a RPC or a TARGETRPC, we call the method
                         default:
-                            Data data = packagueReceived.Data;
+                            Data data = packagueReceived.data;
 
                             rpcManager.CallRPC(data.method, data.parameters);
 

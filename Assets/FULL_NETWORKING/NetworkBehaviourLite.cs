@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class NetworkBehaviour: MonoBehaviour, IConnectionCallbacks
+public class NetworkBehaviourLite: MonoBehaviour
 {
     #region NetworkBehaviour
 
     private bool isConnected;
-
+    
     // This method is called when the client disconnects from the server
     private void OnApplicationQuit()
     {
@@ -32,19 +28,6 @@ public class NetworkBehaviour: MonoBehaviour, IConnectionCallbacks
     {
         this.isConnected = isConnected;
     }
-    
-    #endregion
-
-    #region IConnectionCallbacks
-
-    // This method is called when the client connects to the server
-    public virtual void OnConnected() {}
-
-    // This method is called when the client disconnects from the server
-    public virtual void OnDisconnected() {}
-    
-    // This meethos is called when a client connects to the server
-    public virtual void OnClientConnected(int connectionID) {}
     
     #endregion
 }

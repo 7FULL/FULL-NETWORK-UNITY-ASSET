@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class FULL: MonoBehaviour
@@ -6,9 +7,35 @@ public class FULL: MonoBehaviour
     // This variable is used to know is own by the client or is a remote client
     private bool _isMine;
 
-    private void Awake()
+    public void Connect()
     {
+        // TODO: Wait in a coroutine until the transport starts the client and then send the RPC
         Transport.StartClient(this);
+        SendRPCIDUpdate();
+    }
+    
+    public void Disconnect()
+    {
+        if (IsMine)
+        {
+            Transport.Disconnect();
+        }
+        else
+        {
+            Debug.LogWarning("You can't disconnect a remote client");
+        }
+    }
+
+    public void SendRPCIDUpdate()
+    {
+        SendRPC("UpdateRPC", new object[]{connectionID}, PackagueOptions.RPC_DONT_SEND_BACK);
+    }
+
+    [ClientRPC]
+    public void UpdateRPC(int id)
+    {
+        Debug.Log("UpdateRPC: " + id);
+        ConnectionID = id;
     }
 
     public bool IsMine
@@ -28,7 +55,7 @@ public class FULL: MonoBehaviour
     }
 
     // We get the connection ID from the transport
-    private int connectionID;
+    private int connectionID = -1;
     
     public int ConnectionID
     {
@@ -37,199 +64,53 @@ public class FULL: MonoBehaviour
     }
 
     public delegate void RPCMethodDelegate();
-    
-    public void SendRPC(RPCMethodDelegate method, int clientID = -1, PackagueOptions[] options = null)
+
+    public void SendRPC(string method, int targetID, DataParameterInfo[] parameters = null, PackagueOptions option = PackagueOptions.NONE)
     {
         // If the client specify an ID, then it is a target RPC
         
-        PackagueType type = PackagueType.RPC;
-        
-        string message = '{' +
-                         "method:" + method.Method.Name + ",";
-
-        message += "parameters:[";
-        message += "],";
-
-        if (clientID != -1)
-        {
-            message += "targetID:" + clientID;
-            type = PackagueType.TARGETRPC;
-        }
-        else
-        {
-            message += "targetID: -1";
-        }
-        
-        message += "}";
-
-        Transport.SendTCPMessague(type , message, options);
-    }
-
-    public void SendRPC(string method, int clientID = -1, PackagueOptions[] options = null)
-    {
-        // If the client specify an ID, then it is a target RPC
-        PackagueType type = PackagueType.RPC;
-        
-        string message = '{' +
-                         "method:" + method + ",";
-
-        message += "parameters:[";
-        message += "],";
-
-        if (clientID != -1)
-        {
-            message += "targetID:" + clientID;
-            type = PackagueType.TARGETRPC;
-        }
-        else
-        {
-            message += "targetID: -1";
-        }
-        
-        message += "}";
-
-        Transport.SendTCPMessague(type , message, options);
-    }
-
-    public void SendRPC(string method)
-    {
-        // If the client specify an ID, then it is a target RPC
-        PackagueType type = PackagueType.RPC;
-        
-        string message = '{' +
-                         "method:" + method + ",";
-
-        message += "parameters:[";
-        message += "],";
-
-        message += "targetID: -1";
-        
-        message += "}";
-
-        Transport.SendTCPMessague(type , message, null);
-    }
-    
-    public void SendRPC(string method, int clientID)
-    {
-        // If the client specify an ID, then it is a target RPC
         PackagueType type = PackagueType.TARGETRPC;
+
+        PackagueOptions[] options = new PackagueOptions[]{};
+
+        if (option != 0)
+        {
+            options = new PackagueOptions[]{option};
+        }
+
+        Data data = new Data(method, parameters, targetID);
         
-        string message = '{' +
-                         "method:" + method + ",";
+        Packague packague = new Packague(type, connectionID, options, data);
 
-        message += "parameters:[";
-        message += "],";
-
-        message += "targetID:"+clientID;
-        
-        message += "}";
-
-        Transport.SendTCPMessague(type , message, null);
+        Transport.SendTCPMessague(packague);
     }
     
-    public void SendRPC(string method, object[] parameters = null, int clientID = -1, PackagueOptions[] options = null)
+    public void SendRPC(string method, object[] parameters = null, PackagueOptions option = PackagueOptions.NONE)
     {
         // If the client specify an ID, then it is a target RPC
         
         PackagueType type = PackagueType.RPC;
-        
-        string message = '{' +
-                         "method:" + method + ",";
 
-        message += "parameters:[";
-        if (parameters != null)
+        PackagueOptions[] options = new PackagueOptions[]{};
+
+        if (option != 0)
         {
-            for (int i = 0; i < parameters.Length; i++)
-            {
-                message += "{";
-                message += "type:" + parameters[i].GetType() + ",";
-                message += "value:" + parameters[i];
-                message += "},";
-            }
-            
+            options = new PackagueOptions[]{option};
         }
-        message += "],";
 
-        if (clientID != -1)
+        Type a = method.GetType();
+        
+        List<DataParameterInfo> parametersList = new List<DataParameterInfo>();
+        
+        foreach (object parameter in parameters)
         {
-            message += "targetID:" + clientID;
-            type = PackagueType.TARGETRPC;
+            parametersList.Add(new DataParameterInfo(parameter.GetType(), parameter.ToString()));
         }
-        else
-        {
-            message += "targetID: -1";
-        }
-        
-        message += "}";
 
-        Transport.SendTCPMessague(type , message, options);
-    }
-    
-    public void SendRPC(string method, int clientID = -1, PackagueOptions[] options = null, object[] parameters = null)
-    {
-        // If the client specify an ID, then it is a target RPC
+        Data data = new Data(method, parametersList.ToArray(), -1);
         
-        PackagueType type = PackagueType.RPC;
-        
-        string message = "{" +
-                         "method:" + method + ",";
+        Packague packague = new Packague(type, connectionID, options, data);
 
-        message += "parameters:[";
-        if (parameters != null)
-        {
-            for (int i = 0; i < parameters.Length; i++)
-            {
-                message += "{";
-                message += "type:" + parameters[i].GetType() + ",";
-                message += "value:" + parameters[i];
-                message += "}";
-            }
-            
-        }
-        message += "],";
-
-        if (clientID != -1)
-        {
-            message += "targetID:" + clientID;
-            type = PackagueType.TARGETRPC;
-        }
-        
-        message += "}";
-
-        Transport.SendTCPMessague(type , message, options);
-    }
-    
-    public void SendRPC(string method, int clientID = -1, object[] parameters = null, PackagueOptions[] options = null)
-    {
-        // If the client specify an ID, then it is a target RPC
-        
-        PackagueType type = PackagueType.RPC;
-        
-        string message = "{" +
-                         "method:" + method + ",";
-
-        message += "parameters:[";
-        if (parameters != null)
-        {
-            for (int i = 0; i < parameters.Length; i++)
-            {
-                message += "{";
-                message += "type:" + parameters[i].GetType() + ",";
-                message += "value:" + parameters[i];
-                message += "}";
-            }
-            
-        }
-        message += "],";
-
-        if (clientID != -1)
-        {
-            message += "targetID:" + clientID;
-            type = PackagueType.TARGETRPC;
-        }
-        
-        message += "}";
-
-        Transport.SendTCPMessague(type , message, options);
+        Transport.SendTCPMessague(packague);
     }
 }

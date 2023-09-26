@@ -28,4 +28,15 @@
             }
         }
     }
+    
+    public void OnClientConnected(int connectionID)
+    {
+        foreach (ICallbacks callback in callbacks)
+        {
+            if (callback is IConnectionCallbacks)
+            {
+                ((IConnectionCallbacks) callback).OnClientConnected(connectionID);
+            }
+        }
+    }
 }
