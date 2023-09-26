@@ -54,6 +54,14 @@ public class Data
         this.parameters = parameters;
         this.targetID = targetID; 
     }
+    
+    // Default constructor
+    public Data()
+    {
+        this.method = "";
+        this.parameters = new DataParameterInfo[]{};
+        this.targetID = -1; 
+    }
 }
 
 [System.Serializable]
@@ -80,6 +88,7 @@ public enum PackagueType
     PLAIN = 6,
     DISCONNECTION = 7,
     CONNECTION = 8,
+    CHECK_PLAYERS = 9,
 }
 
 [System.Serializable]

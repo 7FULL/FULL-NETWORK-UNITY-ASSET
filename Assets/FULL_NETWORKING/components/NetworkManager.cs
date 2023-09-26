@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 
@@ -28,16 +29,22 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
         Transport.InitializeConnectionCallbacksContainer(callbacks);
     }
 
-    public void OnConnected() {}
+    public void OnConnected()
+    {
+        Transport.SendTCPMessague(new Packague(PackagueType.CHECK_PLAYERS,Transport.ConnectionID, new PackagueOptions[]{PackagueOptions.NONE}, new Data()));
+    }
 
     public void OnDisconnected() {}
 
     public void OnClientConnected(int connectionID)
     {
-        GameObject x = Instantiate(playerPrefab);
-
-        x.GetComponent<FULL>().ConnectionID = connectionID;
-        
-        // x.GetComponent<FULL>().SendRPCIDUpdate();
+        // This is class is from this github: https://github.com/PimDeWitte/UnityMainThreadDispatcher/blob/master/Runtime/UnityMainThreadDispatcher.cs
+        // It is just use to execute code in the main thread
+        // And since this is a callback from the transport receiveMessageue, it is executed in a different thread
+        MainThreadDispatcher.DispatcherInstance().Enqueue(() =>
+        {
+            GameObject player = Instantiate(playerPrefab);
+            player.GetComponent<FULL>().ConnectionID = connectionID;
+        });
     }
 }

@@ -11,7 +11,6 @@ public class FULL: MonoBehaviour
     {
         // TODO: Wait in a coroutine until the transport starts the client and then send the RPC
         Transport.StartClient(this);
-        SendRPCIDUpdate();
     }
     
     public void Disconnect()
@@ -28,6 +27,7 @@ public class FULL: MonoBehaviour
 
     public void SendRPCIDUpdate()
     {
+        ConnectionID = connectionID;
         SendRPC("UpdateRPC", new object[]{connectionID}, PackagueOptions.RPC_DONT_SEND_BACK);
     }
 
