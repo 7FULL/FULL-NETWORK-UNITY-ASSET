@@ -45,6 +45,9 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
         {
             GameObject player = Instantiate(playerPrefab);
             player.GetComponent<FULL>().ConnectionID = connectionID;
+            
+            // Register the new RPCs
+            Transport.rpcManager.AddRPC(player);
         });
     }
 }

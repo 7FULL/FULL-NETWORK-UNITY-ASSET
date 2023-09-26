@@ -13,8 +13,6 @@ public class RPCManager
 
         foreach (GameObject objeto in objetosEnEscena)
         {
-            FULL[] fulls = objeto.GetComponents<FULL>();
-            
             NetworkBehaviour[] scripts = objeto.GetComponents<NetworkBehaviour>();
             
             foreach (NetworkBehaviour script in scripts)
@@ -33,42 +31,25 @@ public class RPCManager
 
                 methods.Add(objeto, metodosConRPC.ToList());
             }
-
-            foreach (FULL f in fulls)
-            {
-                MethodInfo[] metodos = f.GetType().GetMethods();
-                
-                List<RPCInfo> metodosConRPC = new List<RPCInfo>();
-                
-                foreach (MethodInfo metodo in metodos)
-                {
-                    if (metodo.GetCustomAttributes(typeof(ClientRPCAttribute), true).Length > 0)
-                    {
-                        AddRPC(objeto, metodo, true);
-                    }
-                }
-            }
         }
     }
     
     // This is to add a new RPC method to the list
-    public void AddRPC(GameObject gameObject, MethodInfo methodInfo, bool isFULL)
+    public void AddRPC(GameObject gameObject)
     {
-        if (methods.ContainsKey(gameObject))
+        MethodInfo[] metodos = gameObject.GetComponents<NetworkBehaviour>().SelectMany(x => x.GetType().GetMethods()).ToArray();
+        
+        List<RPCInfo> metodosConRPC = new List<RPCInfo>();
+        
+        foreach (MethodInfo metodo in metodos)
         {
-            if (isFULL)
+            if (metodo.GetCustomAttributes(typeof(ClientRPCAttribute), true).Length > 0)
             {
-                methods[gameObject].Add(new RPCInfo(methodInfo, gameObject.GetComponent<FULL>()));
-            }
-            else
-            {
-                methods[gameObject].Add(new RPCInfo(methodInfo, gameObject.GetComponent<NetworkBehaviour>()));
+                metodosConRPC.Add(new RPCInfo(metodo, gameObject.GetComponent<NetworkBehaviour>()));
             }
         }
-        else
-        {
-            methods.Add(gameObject, new List<RPCInfo> {new RPCInfo(methodInfo, gameObject.GetComponent<NetworkBehaviour>())});
-        }
+
+        methods.Add(gameObject, metodosConRPC.ToList());
     }
     
     // Call RPC

@@ -41,7 +41,7 @@
             }
         }
 
-        private static RPCManager rpcManager = new RPCManager();
+        public static RPCManager rpcManager = new RPCManager();
         
         // This methos initializes the ConnectionCallbacks container
         public static void InitializeConnectionCallbacksContainer(ICallbacks[] callbacks)
