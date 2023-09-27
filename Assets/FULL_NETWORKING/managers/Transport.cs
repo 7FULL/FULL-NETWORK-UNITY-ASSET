@@ -50,6 +50,7 @@
         }
 
         // This method is called from the client to connect to the server
+        // If anything has to be executed after the connection do it in the OnConnected callback in the network manager
         public static int StartClient(FULL f = null)
         {
             if (client != null)
@@ -60,11 +61,7 @@
             {
                 client = new TcpClient(serverIP, serverPort);
                 stream = client.GetStream();
-                
-                receiveThread = new Thread(ReceiveTCPMessage);
-                receiveThread.IsBackground = true;
-                receiveThread.Start();
-                
+
                 isConnected = true;
                 
                 int token = -1;
@@ -100,6 +97,11 @@
                 // We trigger the OnConnected event of the IConectionCallbacks interface
                 callbacksContainer.OnConnected();
                 
+                // We start the thread to receive messages
+                receiveThread = new Thread(ReceiveTCPMessage);
+                receiveThread.IsBackground = true;
+                receiveThread.Start();
+
                 Debug.Log("Connected to server");
             }
             catch (Exception e)
@@ -109,6 +111,35 @@
             }
             
             return connectionID;
+        }
+        
+        // This method is called to register a new NetworkObject and it returns the ID of the object the server assigned
+        public static int RegisterNetworkObject(NetworkObject networkObject)
+        {
+            // We send a message to the server to register the new object
+            Packague packague = new Packague(PackagueType.REGISTER_NETWORK_OBJECT, new PackagueOptions[]{}, new PlainData(networkObject.GetType().ToString()));
+            SendTCPMessague(packague);
+            
+            // We wait for the response from the server
+            List<byte> responseBuffer = new List<byte>();
+                    
+            byte[] buffer = new byte[NetworkManager.Instance.settings.MAX_MESSAGE_SIZE];
+            int bytesRead;
+
+            do 
+            {
+                bytesRead = stream.Read(buffer, 0, buffer.Length);
+                if (bytesRead > 0)
+                {
+                    responseBuffer.AddRange(buffer.Take(bytesRead));
+                }
+            } while (bytesRead == buffer.Length);
+
+            string receivedMessage = Encoding.UTF8.GetString(responseBuffer.ToArray());
+
+            int networkObjectID = int.Parse(receivedMessage);
+
+            return networkObjectID;
         }
 
         // This method is called from the client to disconnect from the server
@@ -214,16 +245,43 @@
                         case PackagueType.HANDSHAKE:
                             Debug.Log(packagueReceived);
                             
+                            PlainData handshakeData = JsonUtility.FromJson<PlainData>(packagueReceived.data);
+                             
+                            Debug.Log(handshakeData.message);
+                            
                             break;
                         
-                        case PackagueType.PLAIN:
-                            // We trigger the OnMessageReceived event
+                        // TODO: If the message is a SYNCVAR, we update the value of the syncvar
+                        case PackagueType.SYNCVAR:
                             Debug.Log(packagueReceived);
+                            
+                            SyncVarData syncVarData = JsonUtility.FromJson<SyncVarData>(packagueReceived.data);
+                            
+                            Debug.Log(syncVarData);
+                            
+                            // If its the same value its a new one if not its an update
+                            
+                            break;
+                        
+                        case PackagueType.CHECK_SYNCVARS:
+                            Debug.Log(packagueReceived);
+                            
+                            PlainData checkSyncVarsData = JsonUtility.FromJson<PlainData>(packagueReceived.data);
+                            
+                            Debug.Log(checkSyncVarsData);
+                            
+                            break;
+
+                        case PackagueType.PLAIN:
+                            PlainData plainData = JsonUtility.FromJson<PlainData>(packagueReceived.data);
+                            
+                            Debug.Log(plainData);
                             break;
                         
                         case PackagueType.CONNECTION:
-                            // If a clients connects the targetID is his ID
-                            callbacksContainer.OnClientConnected(packagueReceived.data.targetID);
+                            // Data contains the connection ID
+                            PlainData connectionData = JsonUtility.FromJson<PlainData>(packagueReceived.data);
+                            callbacksContainer.OnClientConnected(int.Parse(connectionData.message));
                             break;
                         
                         case PackagueType.DISCONNECTION:
@@ -232,9 +290,11 @@
 
                         // If the message is a RPC or a TARGETRPC, we call the method
                         default:
-                            Data data = packagueReceived.data;
+                            Debug.Log(packagueReceived.data);
+                            
+                            RPCData rpcData = JsonUtility.FromJson<RPCData>(packagueReceived.data);
 
-                            rpcManager.CallRPC(data.method, data.parameters);
+                            rpcManager.CallRPC(rpcData.method, rpcData.parameters);
 
                             break;
                     }

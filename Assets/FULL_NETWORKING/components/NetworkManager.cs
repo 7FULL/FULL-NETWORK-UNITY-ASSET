@@ -31,7 +31,13 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
 
     public void OnConnected()
     {
-        Transport.SendTCPMessague(new Packague(PackagueType.CHECK_PLAYERS,Transport.ConnectionID, new PackagueOptions[]{PackagueOptions.NONE}, new Data()));
+        // Check players
+        Transport.SendTCPMessague(new Packague(PackagueType.CHECK_PLAYERS, new PackagueOptions[]{PackagueOptions.NONE}, new PlainData()));
+        
+        // Check sync vars
+        
+        
+        SyncManager.registerSyncVars();
     }
 
     public void OnDisconnected() {}
@@ -47,7 +53,7 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
             player.GetComponent<FULL>().ConnectionID = connectionID;
             
             // Register the new RPCs
-            Transport.rpcManager.AddRPC(player);
+            Transport.rpcManager.RegisterNewRPCSFromGameObject(player);
         });
     }
 }

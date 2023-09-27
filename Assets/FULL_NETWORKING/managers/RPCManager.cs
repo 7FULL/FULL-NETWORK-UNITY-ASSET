@@ -35,7 +35,7 @@ public class RPCManager
     }
     
     // This is to add a new RPC method to the list
-    public void AddRPC(GameObject gameObject)
+    public void RegisterNewRPCSFromGameObject(GameObject gameObject)
     {
         MethodInfo[] metodos = gameObject.GetComponents<NetworkBehaviour>().SelectMany(x => x.GetType().GetMethods()).ToArray();
         
