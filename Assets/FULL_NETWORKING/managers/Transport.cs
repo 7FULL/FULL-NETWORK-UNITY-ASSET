@@ -41,8 +41,6 @@
             }
         }
 
-        public static RPCManager rpcManager = new RPCManager();
-        
         // This methos initializes the ConnectionCallbacks container
         public static void InitializeConnectionCallbacksContainer(ICallbacks[] callbacks)
         {
@@ -107,6 +105,12 @@
             catch (Exception e)
             {
                 Debug.LogError("Error: "+e);
+                
+                // Restore variables
+                client = null;
+                stream = null;
+
+                isConnected = false;
                 throw;
             }
             
@@ -114,32 +118,14 @@
         }
         
         // This method is called to register a new NetworkObject and it returns the ID of the object the server assigned
-        public static int RegisterNetworkObject(NetworkObject networkObject)
+        public static void RegisterSyncVars(SyncVarData[] networkObject)
         {
-            // We send a message to the server to register the new object
-            Packague packague = new Packague(PackagueType.REGISTER_NETWORK_OBJECT, new PackagueOptions[]{}, new PlainData(networkObject.GetType().ToString()));
-            SendTCPMessague(packague);
-            
-            // We wait for the response from the server
-            List<byte> responseBuffer = new List<byte>();
-                    
-            byte[] buffer = new byte[NetworkManager.Instance.settings.MAX_MESSAGE_SIZE];
-            int bytesRead;
-
-            do 
+            // We send a packague for each syncvar
+            foreach (SyncVarData syncVarData in networkObject)
             {
-                bytesRead = stream.Read(buffer, 0, buffer.Length);
-                if (bytesRead > 0)
-                {
-                    responseBuffer.AddRange(buffer.Take(bytesRead));
-                }
-            } while (bytesRead == buffer.Length);
-
-            string receivedMessage = Encoding.UTF8.GetString(responseBuffer.ToArray());
-
-            int networkObjectID = int.Parse(receivedMessage);
-
-            return networkObjectID;
+                Packague packague = new Packague(PackagueType.SYNCVAR, new PackagueOptions[]{PackagueOptions.NONE}, syncVarData);
+                SendTCPMessague(packague);
+            }
         }
 
         // This method is called from the client to disconnect from the server
@@ -243,32 +229,16 @@
                     switch (packagueReceived.packagueType)
                     {
                         case PackagueType.HANDSHAKE:
-                            Debug.Log(packagueReceived);
-                            
                             PlainData handshakeData = JsonUtility.FromJson<PlainData>(packagueReceived.data);
                              
                             Debug.Log(handshakeData.message);
                             
                             break;
                         
-                        // TODO: If the message is a SYNCVAR, we update the value of the syncvar
                         case PackagueType.SYNCVAR:
-                            Debug.Log(packagueReceived);
-                            
                             SyncVarData syncVarData = JsonUtility.FromJson<SyncVarData>(packagueReceived.data);
-                            
-                            Debug.Log(syncVarData);
-                            
-                            // If its the same value its a new one if not its an update
-                            
-                            break;
-                        
-                        case PackagueType.CHECK_SYNCVARS:
-                            Debug.Log(packagueReceived);
-                            
-                            PlainData checkSyncVarsData = JsonUtility.FromJson<PlainData>(packagueReceived.data);
-                            
-                            Debug.Log(checkSyncVarsData);
+
+                            SyncManager.UpdateSyncVar(syncVarData);
                             
                             break;
 
@@ -294,7 +264,7 @@
                             
                             RPCData rpcData = JsonUtility.FromJson<RPCData>(packagueReceived.data);
 
-                            rpcManager.CallRPC(rpcData.method, rpcData.parameters);
+                            RPCManager.CallRPC(rpcData.method, rpcData.parameters);
 
                             break;
                     }

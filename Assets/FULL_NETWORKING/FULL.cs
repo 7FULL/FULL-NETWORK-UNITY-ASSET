@@ -9,7 +9,6 @@ public class FULL: MonoBehaviour
 
     public void Connect()
     {
-        // TODO: Wait in a coroutine until the transport starts the client and then send the RPC
         Transport.StartClient(this);
     }
     

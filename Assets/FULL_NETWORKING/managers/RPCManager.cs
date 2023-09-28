@@ -4,10 +4,10 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 
-public class RPCManager
+public static class RPCManager
 {
-    private Dictionary<GameObject, List<RPCInfo>> methods = new Dictionary<GameObject, List<RPCInfo>>();
-    public RPCManager()
+    private static Dictionary<GameObject, List<RPCInfo>> methods = new Dictionary<GameObject, List<RPCInfo>>();
+    public static void Initialize()
     {
         GameObject[] objetosEnEscena = GameObject.FindObjectsOfType<GameObject>();
 
@@ -35,7 +35,7 @@ public class RPCManager
     }
     
     // This is to add a new RPC method to the list
-    public void RegisterNewRPCSFromGameObject(GameObject gameObject)
+    public static void RegisterNewRPCSFromGameObject(GameObject gameObject)
     {
         MethodInfo[] metodos = gameObject.GetComponents<NetworkBehaviour>().SelectMany(x => x.GetType().GetMethods()).ToArray();
         
@@ -48,12 +48,14 @@ public class RPCManager
                 metodosConRPC.Add(new RPCInfo(metodo, gameObject.GetComponent<NetworkBehaviour>()));
             }
         }
+        
+        Debug.Log(methods.Count);
 
         methods.Add(gameObject, metodosConRPC.ToList());
     }
     
     // Call RPC
-    public void CallRPC(string methodName, DataParameterInfo[] parameters)
+    public static void CallRPC(string methodName, DataParameterInfo[] parameters)
     {
         bool aux = false;
         foreach (KeyValuePair<GameObject, List<RPCInfo>> pair in methods)
@@ -76,7 +78,7 @@ public class RPCManager
         }
     }
 
-    private object[] parseParameters(DataParameterInfo[] parameters)
+    private static object[] parseParameters(DataParameterInfo[] parameters)
     {
         List<object> parametersList = new List<object>();
         

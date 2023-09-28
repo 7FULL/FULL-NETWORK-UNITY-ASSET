@@ -130,21 +130,6 @@ public class DataParameterInfo
 }
 
 [System.Serializable]
-public class SyncVarData : Data
-{
-    public string oldValue;
-    public string newValue;
-    public int id;
-
-    public SyncVarData(string oldValue, string newValue, int id)
-    {
-        this.oldValue = oldValue;
-        this.newValue = newValue;
-        this.id = id;
-    }
-}
-
-[System.Serializable]
 public enum PackagueType
 {
     HANDSHAKE = 1,
@@ -158,7 +143,8 @@ public enum PackagueType
     CHECK_PLAYERS = 9,
     REGISTER_NETWORK_OBJECT = 10,
     SYNCVAR = 11,
-    CHECK_SYNCVARS = 12,
+    REGISTER_SYNCVARS = 12,
+    CHECK_SYNCVARS = 13,
 }
 
 [System.Serializable]

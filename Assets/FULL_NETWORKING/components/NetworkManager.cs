@@ -31,13 +31,23 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
 
     public void OnConnected()
     {
-        // Check players
+        //TODO: Do it with waitUntil instead of WaitForSecondsRealtime
+        StartCoroutine(cheCking());
+    }
+
+    IEnumerator cheCking()
+    {
+        RPCManager.Initialize();
         Transport.SendTCPMessague(new Packague(PackagueType.CHECK_PLAYERS, new PackagueOptions[]{PackagueOptions.NONE}, new PlainData()));
-        
-        // Check sync vars
-        
-        
-        SyncManager.registerSyncVars();
+        yield return new WaitForSecondsRealtime(1);
+        Transport.SendTCPMessague(new Packague(PackagueType.CHECK_SYNCVARS, new PackagueOptions[]{PackagueOptions.NONE}, new PlainData()));
+        yield return new WaitForSecondsRealtime(1);
+        SyncManager.Initialize();
+    }
+    
+    public static int generateLocalID()
+    {
+        return UnityEngine.Random.Range(0, 1000000);
     }
 
     public void OnDisconnected() {}
@@ -53,7 +63,7 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
             player.GetComponent<FULL>().ConnectionID = connectionID;
             
             // Register the new RPCs
-            Transport.rpcManager.RegisterNewRPCSFromGameObject(player);
+            RPCManager.RegisterNewRPCSFromGameObject(player);
         });
     }
 }
