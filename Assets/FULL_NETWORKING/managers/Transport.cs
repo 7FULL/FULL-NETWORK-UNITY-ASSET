@@ -182,8 +182,7 @@
                 else
                 {
                     List<byte> responseBuffer = new List<byte>();
-                
-                    // Max message size is 1024 bytes (1 KB) 
+                    
                     byte[] buffer = new byte[NetworkManager.Instance.settings.MAX_MESSAGE_SIZE];
                     int bytesRead;
 
@@ -199,6 +198,8 @@
                     string receivedMessage = Encoding.UTF8.GetString(responseBuffer.ToArray());
 
                     Packague packagueReceived = JsonUtility.FromJson<Packague>(receivedMessage);
+                    
+                    Debug.Log(packagueReceived);
 
                     /*
                     Packague:
@@ -260,8 +261,6 @@
 
                         // If the message is a RPC or a TARGETRPC, we call the method
                         default:
-                            Debug.Log(packagueReceived.data);
-                            
                             RPCData rpcData = JsonUtility.FromJson<RPCData>(packagueReceived.data);
 
                             RPCManager.CallRPC(rpcData.method, rpcData.parameters);

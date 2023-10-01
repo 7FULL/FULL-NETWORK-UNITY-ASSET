@@ -145,6 +145,7 @@ public enum PackagueType
     SYNCVAR = 11,
     REGISTER_SYNCVARS = 12,
     CHECK_SYNCVARS = 13,
+    REMOVE_SYNCVAR = 14,
 }
 
 [System.Serializable]

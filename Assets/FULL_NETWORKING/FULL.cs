@@ -27,7 +27,7 @@ public class FULL: MonoBehaviour
     public void SendRPCIDUpdate()
     {
         ConnectionID = connectionID;
-        SendRPC("UpdateRPC", new object[]{connectionID}, PackagueOptions.DONT_SEND_BACK);
+        SendRPC("UpdateRPC", new DataParameterInfo[]{new DataParameterInfo(ConnectionID.GetType(), connectionID.ToString())}, PackagueOptions.DONT_SEND_BACK);
     }
 
     [ClientRPC]
@@ -84,7 +84,7 @@ public class FULL: MonoBehaviour
         Transport.SendTCPMessague(packague);
     }
     
-    public void SendRPC(string method, object[] parameters = null, PackagueOptions option = PackagueOptions.NONE)
+    public void SendRPC(string method, DataParameterInfo[] parameters = null, PackagueOptions option = PackagueOptions.NONE)
     {
         // If the client specify an ID, then it is a target RPC
         
@@ -92,21 +92,12 @@ public class FULL: MonoBehaviour
 
         PackagueOptions[] options = new PackagueOptions[]{};
 
-        if (option != 0)
+        if (option != 0)  
         {
             options = new PackagueOptions[]{option};
         }
 
-        Type a = method.GetType();
-        
-        List<DataParameterInfo> parametersList = new List<DataParameterInfo>();
-        
-        foreach (object parameter in parameters)
-        {
-            parametersList.Add(new DataParameterInfo(parameter.GetType(), parameter.ToString()));
-        }
-
-        RPCData data = new RPCData(method, parametersList.ToArray(), -1);
+        RPCData data = new RPCData(method, parameters, -1);
         
         Packague packague = new Packague(type, options, data);
 

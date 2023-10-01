@@ -48,8 +48,6 @@ public static class RPCManager
                 metodosConRPC.Add(new RPCInfo(metodo, gameObject.GetComponent<NetworkBehaviour>()));
             }
         }
-        
-        Debug.Log(methods.Count);
 
         methods.Add(gameObject, metodosConRPC.ToList());
     }
@@ -57,6 +55,8 @@ public static class RPCManager
     // Call RPC
     public static void CallRPC(string methodName, DataParameterInfo[] parameters)
     {
+        Debug.Log("CallRPC: " + methodName);
+        
         bool aux = false;
         foreach (KeyValuePair<GameObject, List<RPCInfo>> pair in methods)
         {
@@ -65,7 +65,6 @@ public static class RPCManager
                 if (rpcInfo.methodInfo.Name == methodName)
                 {
                     aux = true;
-                    
                     
                     rpcInfo.methodInfo.Invoke(rpcInfo.target, parseParameters(parameters));
                 }

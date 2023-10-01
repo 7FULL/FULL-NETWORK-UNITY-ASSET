@@ -33,7 +33,7 @@ public class SyncVar<T>: NetworkObject
                 Packague packague = new Packague(PackagueType.SYNCVAR, new PackagueOptions[]
                     {
                         PackagueOptions.DONT_SEND_BACK
-                    }, new SyncVarData(type, id, value.ToString(), localID));
+                    }, new SyncVarData(type, id, value.ToString(), localID, uniqueID));
                 Transport.SendTCPMessague(packague);
                 InvokeOnChange(this.value, value);
                 
@@ -52,6 +52,18 @@ public class SyncVar<T>: NetworkObject
         Debug.Log("InvokeOnChange: " + oldValue + " " + newValue);
         OnChange?.Invoke(oldValue, newValue);
     }
+    
+    // ToString
+    public string toText()
+    {
+        return "{\n" +
+               "\t type: " + type + ",\n" +
+               "\t id: " + id + ",\n" +
+               "\t value: " + value + "\n" +
+               "\t localID: " + localID + "\n" 
+                + "\t uniqueID: " + uniqueID + "\n" +
+               "}";
+    }
 }
 
 [System.Serializable]
@@ -61,13 +73,15 @@ public class SyncVarData: Data
     public string value;
     public int id;
     public int localID;
+    public int uniqueID;
     
-    public SyncVarData(Type type, int id, string value, int localID)
+    public SyncVarData(Type type, int id, string value, int localID, int uniqueID)
     {
         this.type = type.ToString();
         this.id = id;
         this.value = value;
         this.localID = localID;
+        this.uniqueID = uniqueID;
     }
 
     public override string ToString()
@@ -77,6 +91,7 @@ public class SyncVarData: Data
                "\t\t id: " + id + ",\n" +
                "\t\t value: " + value + "\n" +
                "\t\t localID: " + localID + "\n" +
+                "\t\t uniqueID: " + uniqueID + "\n" +
                "\t}";
     }
 }

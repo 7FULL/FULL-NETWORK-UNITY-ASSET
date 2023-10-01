@@ -24,6 +24,8 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
             Destroy(this);
         }
         
+        SyncManager.GenerateUniqueIDS();
+        
         ICallbacks[] callbacks = FindObjectsOfType<MonoBehaviour>().OfType<ICallbacks>().ToArray();
         
         Transport.InitializeConnectionCallbacksContainer(callbacks);
@@ -40,7 +42,7 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
         RPCManager.Initialize();
         Transport.SendTCPMessague(new Packague(PackagueType.CHECK_PLAYERS, new PackagueOptions[]{PackagueOptions.NONE}, new PlainData()));
         yield return new WaitForSecondsRealtime(1);
-        Transport.SendTCPMessague(new Packague(PackagueType.CHECK_SYNCVARS, new PackagueOptions[]{PackagueOptions.NONE}, new PlainData()));
+        SyncManager.checkSyncVars();
         yield return new WaitForSecondsRealtime(1);
         SyncManager.Initialize();
     }
@@ -65,5 +67,7 @@ public class NetworkManager: MonoBehaviour, IConnectionCallbacks
             // Register the new RPCs
             RPCManager.RegisterNewRPCSFromGameObject(player);
         });
+        
+        SyncManager.checkSyncVars();
     }
 }
